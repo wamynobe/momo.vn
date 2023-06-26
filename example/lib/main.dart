@@ -1,35 +1,36 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:momo_vn/momo_vn.dart';
-import 'package:flutter/services.dart';
+import 'package:momo_vn/momo.dart';
+
+import 'data.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
+  const MyApp({Key? key}) : super(key: key);
+
   @override
   _MyAppState createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
   late MomoVn _momoPay;
-  late PaymentResponse _momoPaymentResult;
+  late MomoEvent _momoEvent;
   // ignore: non_constant_identifier_names
   late String _paymentStatus;
   @override
   void initState() {
     super.initState();
     _momoPay = MomoVn();
-    _momoPay.on(MomoVn.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-    _momoPay.on(MomoVn.EVENT_PAYMENT_ERROR, _handlePaymentError);
-    _paymentStatus = "";
+    _momoPay.on(MomoVn.EVENT_NAME, _handlePayment);
+    _paymentStatus = '';
     initPlatformState();
   }
+
   Future<void> initPlatformState() async {
     if (!mounted) return;
-      setState(() {
-    });
+    setState(() {});
   }
 
   @override
@@ -37,38 +38,31 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: Text('THANH TOÁN QUA ỨNG DỤNG MOMO'),
+          title: const Text('THANH TOÁN QUA ỨNG DỤNG MOMO'),
         ),
         body: Center(
           child: Column(
             children: <Widget>[
               Column(
                 children: [
-                  FlatButton(
-                    color: Colors.blue,
-                    textColor: Colors.white,
-                    disabledColor: Colors.grey,
-                    disabledTextColor: Colors.black,
-                    padding: EdgeInsets.all(8.0),
-                    splashColor: Colors.blueAccent,
-                    child: Text('DEMO PAYMENT WITH MOMO.VN'),
+                  ElevatedButton(
+                    child: const Text('DEMO PAYMENT WITH MOMO.VN'),
                     onPressed: () async {
-                      MomoPaymentInfo options = MomoPaymentInfo(
-                          merchantName: "TTNC&TVKT",
-                          appScheme: "MOMOUMGQ111111",
-                          merchantCode: 'MOMOUMGQ111111',
-                          partnerCode: 'MOMOUMGQ111111',
+                      final options = MomoPaymentInfo(
+                          merchantName: 'Revup',
+                          appScheme: 'momornke20220801',
+                          merchantCode: 'MOMORNKE20220801',
+                          partnerCode: 'MOMORNKE20220801',
                           amount: 60000,
                           orderId: '12321312',
                           orderLabel: 'Gói khám sức khoẻ',
-                          merchantNameLabel: "HẸN KHÁM BỆNH",
+                          merchantNameLabel: 'HẸN KHÁM BỆNH',
                           fee: 10,
                           description: 'Thanh toán hẹn khám chữa bệnh',
                           username: '01234567890',
                           partner: 'merchant',
-                          extra: "{\"key1\":\"value1\",\"key2\":\"value2\"}",
-                          isTestMode: true
-                      );
+                          extra: '{\"key1\":\"value1\",\"key2\":\"value2\"}',
+                          isTestMode: true);
                       try {
                         _momoPay.open(options);
                       } catch (e) {
@@ -78,42 +72,52 @@ class _MyAppState extends State<MyApp> {
                   ),
                 ],
               ),
-              Text(_paymentStatus.isEmpty ? "CHƯA THANH TOÁN" : _paymentStatus)
+              Text(_paymentStatus.isEmpty ? 'CHƯA THANH TOÁN' : _paymentStatus)
             ],
           ),
         ),
       ),
     );
   }
+
   @override
   void dispose() {
     super.dispose();
     _momoPay.clear();
   }
+
   void _setState() {
-    _paymentStatus = 'Đã chuyển thanh toán';
-    if (_momoPaymentResult.isSuccess == true) {
-      _paymentStatus += "\nTình trạng: Thành công.";
-      _paymentStatus += "\nSố điện thoại: " + _momoPaymentResult.phoneNumber.toString();
-      _paymentStatus += "\nExtra: " + _momoPaymentResult.extra!;
-      _paymentStatus += "\nToken: " + _momoPaymentResult.token.toString();
-    }
-    else {
-      _paymentStatus += "\nTình trạng: Thất bại.";
-      _paymentStatus += "\nExtra: " + _momoPaymentResult.extra.toString();
-      _paymentStatus += "\nMã lỗi: " + _momoPaymentResult.status.toString();
-    }
-  }
-  void _handlePaymentSuccess(PaymentResponse response) {
-    setState(() {
-      _momoPaymentResult = response;
-      _setState();
-    });
+    _momoEvent.when(
+      success: (paymentResponse) {
+        _paymentStatus = 'success';
+        _paymentStatus +=
+            '\nSố điện thoại: ' + paymentResponse.phoneNumber.toString();
+      },
+      failure: (failure) {
+        failure.when(
+          validate: (message) {
+            _paymentStatus = 'fail by ${message}';
+          },
+          payment: (message, data) {
+            _paymentStatus = 'fail by $message\n$data';
+          },
+          other: (message, code) {
+            _paymentStatus = 'fail by ${message} ${code}';
+          },
+        );
+      },
+      timeout: () {
+        _paymentStatus = 'timeout';
+      },
+      cancel: () {
+        _paymentStatus = 'cancel';
+      },
+    );
   }
 
-  void _handlePaymentError(PaymentResponse response) {
+  void _handlePayment(MomoEvent momoEvent) {
     setState(() {
-      _momoPaymentResult = response;
+      _momoEvent = momoEvent;
       _setState();
     });
   }

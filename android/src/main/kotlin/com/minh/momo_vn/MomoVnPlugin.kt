@@ -86,18 +86,18 @@ class MomoVnPlugin : MethodCallHandler,FlutterPlugin,ActivityAware,ActivityResul
             if (requestCode == AppMoMoLib.getInstance().REQUEST_CODE_MOMO) {
                 _handleResult(data)
             }
+        }else{
+            val data: MutableMap<String, Any> = java.util.HashMap()
+            data.put("isSuccess", false)
+            data.put("status", resultCode)
+            data.put("phoneNumber", "")
+            data.put("token", "")
+            data.put("message", "")
+            data.put("extra", "")
+            sendReply(data)
         }
         return true
     }
-    private fun sendReply(data: Map<String, Any>) {
-        if (this.pendingResult != null) {
-            this.pendingResult?.success(data)
-            pendingReply = null
-        } else {
-            pendingReply = data
-        }
-    }
-
     private fun _handleResult(data: Intent?) {
         data?.let {
             val status = data.getIntExtra("status", -1)
@@ -126,4 +126,13 @@ class MomoVnPlugin : MethodCallHandler,FlutterPlugin,ActivityAware,ActivityResul
             sendReply(data)
         }
     }
+    private fun sendReply(data: Map<String, Any>) {
+        if (this.pendingResult != null) {
+            this.pendingResult?.success(data)
+            pendingReply = null
+        } else {
+            pendingReply = data
+        }
+    }
+
 }
